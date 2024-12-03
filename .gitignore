@@ -1,0 +1,8 @@
+.vscode
+*.gtr
+build
+*.png
+*.jpeg
+src/gen/*
+src/gen/assets/*
+bin
