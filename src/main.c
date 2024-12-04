@@ -33,7 +33,6 @@ unsigned char end_track;
 unsigned int track_progression;
 unsigned char tire;
 unsigned char drift_turn_offset;
-unsigned char noise;
 unsigned char bump;
 
 unsigned char other_car_speed[4];
@@ -209,7 +208,6 @@ int main () {
 
     finish_line_offset = 0;
     finish_line_offset_low = 0;
-    noise = 0;
 
     for (tmp=0; tmp<4; tmp++) {
         other_car_track_lengths[tmp] = track_lengths;
@@ -343,13 +341,14 @@ int main () {
         tmp = speed_high >> 1;
         car_x += drift[drift_turn_offset + tmp];
 
+        // If the car hits the side of the road
         if (car_x <= 30) {
             car_x = 30;
             if (speed > 2) {
                 speed-=2;
                 speed_high = speed >> 3;
                 speed_low = speed & 7;
-                pitch_engine_long--;
+                pitch_engine_long-=2;
                 pitch_engine = pitch_engine_long >> 2;
             }
             bump = 1;
@@ -359,7 +358,7 @@ int main () {
                 speed-=2;
                 speed_high = speed >> 3;
                 speed_low = speed & 7;
-                pitch_engine_long--;
+                pitch_engine_long-=2;
                 pitch_engine = pitch_engine_long >> 2;
             }
             bump = 1;
@@ -414,11 +413,6 @@ int main () {
         if (landscape & 0x80) landscape -= 128;
         
         // Play the engine noise
-        noise++;
-        if (noise == 2) {
-            play_sound_effect(&ASSET__sfx__engine_bin , 1);
-            noise = 0;
-        }
         tick_music();
 
         // test

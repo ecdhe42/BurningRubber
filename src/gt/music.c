@@ -74,9 +74,11 @@ unsigned char music_mode = REPEAT_NONE;
 
 unsigned char music_channel_mask;
 unsigned char* sound_effect_ptr;
+unsigned char *sound_effect_ptr_default;
 unsigned char sound_effect_bank;
 unsigned char sound_effect_channel;
 unsigned char sound_effect_length;
+unsigned char sound_effect_length_default;
 unsigned char saved_feedback_value;
 unsigned char sound_effect_priority;
 
@@ -195,7 +197,11 @@ void tick_music() {
 
      if(sound_effect_length) {
         sound_effect_length--;
-        if(sound_effect_length) {
+        if(sound_effect_length & 2) {
+            sound_effect_length = sound_effect_length_default;
+            sound_effect_ptr = sound_effect_ptr_default;
+        }
+        
             change_rom_bank(sound_effect_bank);
 
             op = sound_effect_channel << 2;
@@ -225,13 +231,13 @@ void tick_music() {
             sound_effect_ptr += 8;
 
             pop_rom_bank();
-        } else {
+/*        } else {
             op = sound_effect_channel << 2;
             set_audio_param(AMPLITUDE+(op+3), sine_offset);
             aram[FEEDBACK_AMT + sound_effect_channel] = saved_feedback_value;
             music_channel_mask = 0xFF;
             sound_effect_priority = 0;
-        }
+        }*/
     }
 
 
@@ -337,8 +343,10 @@ void play_sound_effect(char* sfx_ptr, char sfx_bank, char priority) {
     sound_effect_channel = 2;
     change_rom_bank(sound_effect_bank);
     sound_effect_length = *(sound_effect_ptr++) + 1;
+    sound_effect_length_default = sound_effect_length;
     saved_feedback_value = aram[FEEDBACK_AMT + sound_effect_channel];
     aram[FEEDBACK_AMT + sound_effect_channel] = *(sound_effect_ptr++);
+    sound_effect_ptr_default = sound_effect_ptr;
     music_channel_mask &= ~(channel_masks[sound_effect_channel]);
     pop_rom_bank();
 }
