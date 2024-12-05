@@ -6,3 +6,5 @@ build
 src/gen/*
 src/gen/assets/*
 bin
+sdk1
+sdk2
