@@ -43,6 +43,7 @@ unsigned char other_car_track_id_long[4];
 unsigned char other_car_track_offset[4];
 unsigned char other_car_track_lengths[4];
 unsigned int other_car_track_progression[4];
+unsigned char other_car_lap[4];
 
 char track_id;
 char *track_x_shift;
@@ -54,6 +55,7 @@ unsigned char track_id_long;
 unsigned char lap_total;
 unsigned char lap;
 unsigned char display_lap;
+unsigned char start;
 #pragma bss-name (pop)
 
 /*
@@ -253,8 +255,9 @@ int main () {
     drift_turn_offset = 12;
     bump = 0;
     lap = 1;
-//    lap_total = 1;
-//    display_lap = 120;
+    lap_total = 1;
+    display_lap = 250;
+    start = 200;
 
     finish_line_offset = 0;
     finish_line_offset_low = 0;
@@ -267,6 +270,7 @@ int main () {
         other_car_track_id[tmp] = tmp << 3;
         other_car_track_id_long[tmp] = 0;
         other_car_track_progression[tmp] = tmp << 3;
+        other_car_lap[tmp] = 1;
     }
 
     play_sound_effect(&ASSET__sfx__engine_bin , 1);

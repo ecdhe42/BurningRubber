@@ -38,6 +38,7 @@ extern unsigned char other_car_track_id_long[4];
 extern unsigned char other_car_track_offset[4];
 extern unsigned char other_car_track_lengths[4];
 extern unsigned int other_car_track_progression[4];
+extern unsigned char other_car_lap[4];
 
 extern unsigned char pitch_engine;
 extern unsigned char pitch_engine_long;
@@ -50,6 +51,8 @@ extern unsigned char display_lap;
 extern char track_id;
 extern char *track_x_shift;
 extern char *track_x_shift0;
+
+extern char start;
 
 #pragma zpsym ("tmp");
 #pragma zpsym ("tmp2");
@@ -80,6 +83,7 @@ extern char *track_x_shift0;
 #pragma zpsym ("other_car_track_offset");
 #pragma zpsym ("other_car_track_lengths");
 #pragma zpsym ("other_car_track_progression");
+#pragma zpsym ("other_car_lap");
 #pragma zpsym ("pitch_engine");
 #pragma zpsym ("pitch_engine_long");
 #pragma zpsym ("track_id_long");
@@ -89,6 +93,7 @@ extern char *track_x_shift0;
 #pragma zpsym ("lap_total");
 #pragma zpsym ("lap");
 #pragma zpsym ("display_lap");
+#pragma zpsym ("start");
 
 extern unsigned char track[47];
 extern char tracks[20][64];
@@ -100,6 +105,9 @@ extern unsigned char track_map_x[98];
 extern unsigned char track_map_y[98];
 extern const char drift[27];
 
+unsigned char start1 = 64;
+unsigned char start2 = 64;
+unsigned char start3 = 64;
 
 #pragma code-name(push, "PROG0")
 
@@ -109,11 +117,10 @@ extern const char drift[27];
     rect.x=track_x_shift[line];rect.y=line+32;rect.w=track_width[line];rect.gx=track_x_shift0[line];rect.gy=tracks[track_id][line];rect.b=tmp2;draw_sprite_rect();
 
 void main_loop() {
-        clear_screen(0);
-
         draw_sprite(landscape, 0, 127-landscape, 32, 0, 0, 2);      // Draw landscape
         draw_sprite(0, 0, landscape, 32, 127-landscape, 0, 2);
         draw_box(0, 32, 127, 64, 27);                               // Draw grass
+        draw_box(48, 96, 80, 32, 0);
 
         tmp2 = 0;
         if (end_track) {
@@ -137,13 +144,19 @@ void main_loop() {
                 track_lengths = tmp & 63;
 
                 if (lap == lap_total) {
-                    draw_sprite(37, 64, 48, 9, 0, 91, 3);
-                    draw_sprite(85, 64, 6, 9, 6, 64, 3);
+                    tmp = 1;
+                    if (lap < other_car_lap[0]) { tmp++; }
+                    if (lap < other_car_lap[1]) { tmp++; }
+                    if (lap < other_car_lap[2]) { tmp++; }
+                    if (lap < other_car_lap[3]) { tmp++; }
+
+                    draw_sprite(37, 64, 48, 9, 0, 91, 3);       // Display "Position:"
+                    draw_sprite(85, 64, 6, 9, 6*tmp, 64, 3);    // Display the position
                     await_draw_queue();
                     sleep(1);
                     flip_pages();
                     draw_sprite(37, 64, 48, 9, 0, 91, 3);
-                    draw_sprite(85, 64, 6, 9, 6, 64, 3);
+                    draw_sprite(85, 64, 6, 9, 6*tmp, 64, 3);
                     await_draw_queue();
                     sleep(1);
                     flip_pages();
@@ -282,7 +295,14 @@ void main_loop() {
 
         if (display_lap) {
             display_lap--;
-            if (display_lap & 8) {
+            if (lap == 1) {
+                if (!start) {
+                    draw_sprite(36, 40, 16, 16, 48, 16, 3);
+                    draw_sprite(56, 40, 16, 16, 48, 16, 3);
+                    draw_sprite(76, 40, 16, 16, 48, 16, 3);
+                }
+            }
+            else if (display_lap & 8) {
                 if (lap == lap_total) {
                     draw_sprite(38, 64, 51, 9, 0, 82, 3);
                 } else {
@@ -312,165 +332,193 @@ void main_loop() {
         if (*((unsigned char *)&track_progression) & 0x80) { tmp++; };
         draw_sprite(track_map_x[tmp], track_map_y[tmp], 5, 5, 48, 0, 3);
 
-        // Steering
-        update_inputs();
-        if(player1_buttons & INPUT_MASK_LEFT) {
-            car_x--;
-            car_x--;
-        } else if (player1_buttons & INPUT_MASK_RIGHT) {
-            car_x++;
-            car_x++;
-        }
-
-        // Compute the drift
-        tmp = speed_high >> 1;
-        car_x += drift[drift_turn_offset + tmp];
-
-        // If the car hits the side of the road
-        if (car_x <= 30) {
-            car_x = 30;
-            if (speed > 2) {
-                speed-=2;
-                speed_high = speed >> 3;
-                speed_low = speed & 7;
-                pitch_engine_long-=2;
-                pitch_engine = pitch_engine_long >> 2;
+        // Display starting blocks (no car movement)
+        if (start) {
+            if (start == 161) {
+                start1 = 48;
+            } else if (start == 81) {
+                start2 = 48;
+            } else if (start == 1) {
+                start3 = 48;
             }
-            bump = 1;
-        } else if (car_x >= 180) {
-            car_x = 180;
-            if (speed > 2) {
-                speed-=2;
-                speed_high = speed >> 3;
-                speed_low = speed & 7;
-                pitch_engine_long-=2;
-                pitch_engine = pitch_engine_long >> 2;
-            }
-            bump = 1;
+            draw_sprite(36, 40, 16, 16, start1, 16, 3);
+            draw_sprite(56, 40, 16, 16, start2, 16, 3);
+            draw_sprite(76, 40, 16, 16, start3, 16, 3);
+            start--;
         } else {
-            bump = 0;
-        }
+            // Steering
+            update_inputs();
+            if(player1_buttons & INPUT_MASK_LEFT) {
+                car_x--;
+                car_x--;
+            } else if (player1_buttons & INPUT_MASK_RIGHT) {
+                car_x++;
+                car_x++;
+            }
 
-        // Player input (acceleration and deceleration)
-        if((player1_buttons & INPUT_MASK_UP) && !bump) {
-            if (speed != 32) {
-                speed++;
-                speed_high = speed >> 3;
-                speed_low = speed & 7;
-                pitch_engine_long++;
-                pitch_engine = pitch_engine_long >> 2;
-            }
-        } else if(player1_buttons & INPUT_MASK_DOWN) {
-            if (speed != 1) {
-                speed--;
-                speed_high = speed >> 3;
-                speed_low = speed & 7;
-                pitch_engine_long--;
-                pitch_engine = pitch_engine_long >> 2;
-            }
-        }
+            // Compute the drift
+            tmp = speed_high >> 1;
+            car_x += drift[drift_turn_offset + tmp];
 
-        // landscape += (turn >> 2) * speed / 32
-        if (!(turn & 4)) {
-            tmp = (4 - turn) * speed;
-            tmp2 = tmp >> 7;
-            tmp3 = tmp & 127;
-            landscape_low += tmp3;
-            if (landscape_low & 0x80) {
-                landscape_low -= 128;
-                landscape++;
+            // If the car hits the side of the road
+            if (car_x <= 30) {
+                car_x = 30;
+                if (speed > 2) {
+                    speed-=2;
+                    speed_high = speed >> 3;
+                    speed_low = speed & 7;
+                    pitch_engine_long-=2;
+                    pitch_engine = pitch_engine_long >> 2;
+                }
+                bump = 1;
+            } else if (car_x >= 180) {
+                car_x = 180;
+                if (speed > 2) {
+                    speed-=2;
+                    speed_high = speed >> 3;
+                    speed_low = speed & 7;
+                    pitch_engine_long-=2;
+                    pitch_engine = pitch_engine_long >> 2;
+                }
+                bump = 1;
+            } else {
+                bump = 0;
             }
-            landscape += tmp2;
-        } else if (turn == 4) {
 
-        } else {
-            tmp = (turn-4) * speed;
-            tmp2 = tmp >> 7;
-            tmp3 = tmp & 127;
-            landscape_low += tmp3;
-            if (landscape_low & 0x80) {
-                landscape_low -= 128;
-                landscape--;
-            }
-            landscape -= tmp2;
-        }
-        if (landscape & 0x80) landscape -= 128;
-        
-        // test
-        track_id_long += speed;
-        tmp = track_id;
-        track_id = track_id_long >> 3;
-        tmp = track_id - tmp;
-        track_progression += tmp;
-        if (track_id >= 20) {
-            track_id -= 20;
-            track_id_long -= 160;
-            track_lengths--;
-            if (!track_lengths) {
-                track_offset++;
-                tmp = track[track_offset];
-                if (tmp == 255) {
-                    end_track = 1;
-                    finish_line_offset = 0;
-                    finish_line_offset_low = 0;
-                } else {
-                    track_lengths = tmp & 63;
-                    if (tmp & 0x80) {
-                        turn--;
-                        drift_turn_offset -= 3;
-                    }
-                    else if (tmp & 0x40) {
-                        turn++;
-                        drift_turn_offset += 3;
-                    }
-                    track_x_shift = (char *)track_x_shifts[turn];
+            // Player input (acceleration and deceleration)
+            if((player1_buttons & INPUT_MASK_UP) && !bump) {
+                if (speed != 32) {
+                    speed++;
+                    speed_high = speed >> 3;
+                    speed_low = speed & 7;
+                    pitch_engine_long++;
+                    pitch_engine = pitch_engine_long >> 2;
+                }
+            } else if(player1_buttons & INPUT_MASK_DOWN) {
+                if (speed != 1) {
+                    speed--;
+                    speed_high = speed >> 3;
+                    speed_low = speed & 7;
+                    pitch_engine_long--;
+                    pitch_engine = pitch_engine_long >> 2;
                 }
             }
-        }
 
-        other_car_track_id_long[0] += other_car_speed[0];
-        tmp = other_car_track_id[0];
-        other_car_track_id[0] = other_car_track_id_long[0] >> 3;
-        tmp = other_car_track_id[0] - tmp;
-        other_car_track_progression[0] += tmp;
-        if (other_car_track_id[0] >= 20) {
-            other_car_track_id[0] -= 20;
-            other_car_track_id_long[0] -= 160;
-        }
-        if (other_car_track_progression[0] >= TRACK_PROGRESSION_END) other_car_track_progression[0] = 0;
+            // landscape += (turn >> 2) * speed / 32
+            if (!(turn & 4)) {
+                tmp = (4 - turn) * speed;
+                tmp2 = tmp >> 7;
+                tmp3 = tmp & 127;
+                landscape_low += tmp3;
+                if (landscape_low & 0x80) {
+                    landscape_low -= 128;
+                    landscape++;
+                }
+                landscape += tmp2;
+            } else if (turn == 4) {
 
-        other_car_track_id_long[1] += other_car_speed[1];
-        tmp = other_car_track_id[1];
-        other_car_track_id[1] = other_car_track_id_long[1] >> 3;
-        tmp = other_car_track_id[1] - tmp;
-        other_car_track_progression[1] += tmp;
-        if (other_car_track_id[1] >= 20) {
-            other_car_track_id[1] -= 20;
-            other_car_track_id_long[1] -= 160;
+            } else {
+                tmp = (turn-4) * speed;
+                tmp2 = tmp >> 7;
+                tmp3 = tmp & 127;
+                landscape_low += tmp3;
+                if (landscape_low & 0x80) {
+                    landscape_low -= 128;
+                    landscape--;
+                }
+                landscape -= tmp2;
+            }
+            if (landscape & 0x80) landscape -= 128;
+            
+            // Change the track progression
+            track_id_long += speed;
+            tmp = track_id;
+            track_id = track_id_long >> 3;
+            tmp = track_id - tmp;
+            track_progression += tmp;
+            if (track_id >= 20) {
+                track_id -= 20;
+                track_id_long -= 160;
+                track_lengths--;
+                if (!track_lengths) {
+                    track_offset++;
+                    tmp = track[track_offset];
+                    if (tmp == 255) {
+                        end_track = 1;
+                        finish_line_offset = 0;
+                        finish_line_offset_low = 0;
+                    } else {
+                        track_lengths = tmp & 63;
+                        if (tmp & 0x80) {
+                            turn--;
+                            drift_turn_offset -= 3;
+                        }
+                        else if (tmp & 0x40) {
+                            turn++;
+                            drift_turn_offset += 3;
+                        }
+                        track_x_shift = (char *)track_x_shifts[turn];
+                    }
+                }
+            }
+
+            // Change the track progression for the other cars
+            other_car_track_id_long[0] += other_car_speed[0];
+            tmp = other_car_track_id[0];
+            other_car_track_id[0] = other_car_track_id_long[0] >> 3;
+            tmp = other_car_track_id[0] - tmp;
+            other_car_track_progression[0] += tmp;
+            if (other_car_track_id[0] >= 20) {
+                other_car_track_id[0] -= 20;
+                other_car_track_id_long[0] -= 160;
+            }
+            if (other_car_track_progression[0] >= TRACK_PROGRESSION_END) {
+                other_car_track_progression[0] = 0;
+                other_car_lap[0]++;
+            }
+
+            other_car_track_id_long[1] += other_car_speed[1];
+            tmp = other_car_track_id[1];
+            other_car_track_id[1] = other_car_track_id_long[1] >> 3;
+            tmp = other_car_track_id[1] - tmp;
+            other_car_track_progression[1] += tmp;
+            if (other_car_track_id[1] >= 20) {
+                other_car_track_id[1] -= 20;
+                other_car_track_id_long[1] -= 160;
+            }
+            if (other_car_track_progression[1] >= TRACK_PROGRESSION_END) {
+                other_car_track_progression[1] = 0;
+                other_car_lap[1]++;
+            }
+            
+            other_car_track_id_long[2] += other_car_speed[2];
+            tmp = other_car_track_id[2];
+            other_car_track_id[2] = other_car_track_id_long[2] >> 3;
+            tmp = other_car_track_id[2] - tmp;
+            other_car_track_progression[2] += tmp;
+            if (other_car_track_id[2] >= 20) {
+                other_car_track_id[2] -= 20;
+                other_car_track_id_long[2] -= 160;
+            }
+            if (other_car_track_progression[2] >= TRACK_PROGRESSION_END) {
+                other_car_track_progression[2] = 0;
+                other_car_lap[2]++;
+            }
+            
+            other_car_track_id_long[3] += other_car_speed[3];
+            tmp = other_car_track_id[3];
+            other_car_track_id[3] = other_car_track_id_long[3] >> 3;
+            tmp = other_car_track_id[3] - tmp;
+            other_car_track_progression[3] += tmp;
+            if (other_car_track_id[3] >= 20) {
+                other_car_track_id[3] -= 20;
+                other_car_track_id_long[3] -= 160;
+            }
+            if (other_car_track_progression[3] >= TRACK_PROGRESSION_END) {
+                other_car_track_progression[3] = 0;
+                other_car_lap[3]++;
+            }
         }
-        if (other_car_track_progression[1] >= TRACK_PROGRESSION_END) other_car_track_progression[1] = 0;
-        
-        other_car_track_id_long[2] += other_car_speed[2];
-        tmp = other_car_track_id[2];
-        other_car_track_id[2] = other_car_track_id_long[2] >> 3;
-        tmp = other_car_track_id[2] - tmp;
-        other_car_track_progression[2] += tmp;
-        if (other_car_track_id[2] >= 20) {
-            other_car_track_id[2] -= 20;
-            other_car_track_id_long[2] -= 160;
-        }
-        if (other_car_track_progression[2] >= TRACK_PROGRESSION_END) other_car_track_progression[2] = 0;
-        
-        other_car_track_id_long[3] += other_car_speed[3];
-        tmp = other_car_track_id[3];
-        other_car_track_id[3] = other_car_track_id_long[3] >> 3;
-        tmp = other_car_track_id[3] - tmp;
-        other_car_track_progression[3] += tmp;
-        if (other_car_track_id[3] >= 20) {
-            other_car_track_id[3] -= 20;
-            other_car_track_id_long[3] -= 160;
-        }
-        if (other_car_track_progression[3] >= TRACK_PROGRESSION_END) other_car_track_progression[3] = 0;
 
         await_draw_queue();
         PROFILER_END(0);
