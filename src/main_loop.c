@@ -43,6 +43,10 @@ extern unsigned char pitch_engine;
 extern unsigned char pitch_engine_long;
 extern unsigned char track_id_long;
 
+extern unsigned char lap_total;
+extern unsigned char lap;
+extern unsigned char display_lap;
+
 extern char track_id;
 extern char *track_x_shift;
 extern char *track_x_shift0;
@@ -82,6 +86,9 @@ extern char *track_x_shift0;
 #pragma zpsym ("track_id");
 #pragma zpsym ("track_x_shift");
 #pragma zpsym ("track_x_shift0");
+#pragma zpsym ("lap_total");
+#pragma zpsym ("lap");
+#pragma zpsym ("display_lap");
 
 extern unsigned char track[47];
 extern char tracks[20][64];
@@ -128,6 +135,22 @@ void main_loop() {
                 track_progression = 0;
                 tmp = track[track_offset];
                 track_lengths = tmp & 63;
+
+                if (lap == lap_total) {
+                    draw_sprite(37, 64, 48, 9, 0, 91, 3);
+                    draw_sprite(85, 64, 6, 9, 6, 64, 3);
+                    await_draw_queue();
+                    sleep(1);
+                    flip_pages();
+                    draw_sprite(37, 64, 48, 9, 0, 91, 3);
+                    draw_sprite(85, 64, 6, 9, 6, 64, 3);
+                    await_draw_queue();
+                    sleep(1);
+                    flip_pages();
+                    while (1);
+                }
+                lap++;
+                display_lap = 120;
             }
         }
 
@@ -255,6 +278,18 @@ void main_loop() {
             draw_sprite(car_x >> 1, 79, 32, 16, ((track_id&3) << 5), 96, 2);
         } else {
             draw_sprite(car_x >> 1, 80, 32, 16, ((track_id&3) << 5), 96, 2);
+        }
+
+        if (display_lap) {
+            display_lap--;
+            if (display_lap & 8) {
+                if (lap == lap_total) {
+                    draw_sprite(38, 64, 51, 9, 0, 82, 3);
+                } else {
+                    draw_sprite(50, 64, 18,9, 0, 73, 3);
+                    draw_sprite(75, 64, 6, 9, lap*6, 64, 3);
+                }
+            }
         }
 
         // Draw speedometer

@@ -50,6 +50,10 @@ char *track_x_shift0;
 unsigned char pitch_engine;
 unsigned char pitch_engine_long;
 unsigned char track_id_long;
+
+unsigned char lap_total;
+unsigned char lap;
+unsigned char display_lap;
 #pragma bss-name (pop)
 
 /*
@@ -163,6 +167,45 @@ const char drift[27] = {
 
 void breakpoint() {}
 
+void splash() {
+    flip_pages();
+    clear_border(0);
+    await_draw_queue();
+    flip_pages();
+    await_draw_queue();
+    clear_border(0);
+
+    lap_total = 2;
+
+    while (1) {
+        draw_sprite(0, 0, 127, 127, 0, 0, 4);
+
+        draw_sprite(50, 64, 6, 9, lap_total*6, 64, 3);
+        draw_sprite(60, 64, 24,9, 0, 73, 3);
+
+        await_draw_queue();
+
+        update_inputs();
+        if(player1_buttons & INPUT_MASK_LEFT & ~player1_old_buttons || player1_buttons & INPUT_MASK_DOWN & ~player1_old_buttons) {
+            if (lap_total > 2) {
+                lap_total--;
+            }
+        } else if (player1_buttons & INPUT_MASK_RIGHT & ~player1_old_buttons || player1_buttons & INPUT_MASK_UP & ~player1_old_buttons) {
+            if (lap_total < 9) {
+                lap_total++;
+            }
+        }
+
+        if (player1_buttons & ~player1_old_buttons & INPUT_MASK_A) {
+            break;
+        }
+
+        PROFILER_END(0);
+        sleep(1);
+        flip_pages();
+    }
+}
+
 int main () {
     init_graphics();
     init_dynawave();
@@ -181,6 +224,8 @@ int main () {
     load_spritesheet((char *)&ASSET__rubber__track_map_bmp, 3);
     load_spritesheet((char *)&ASSET__rubber__splash_bmp, 4);
     change_rom_bank(SAVE_BANK_NUM);
+
+    splash();
 
     track_id = 0;
     track_x_shift = (char *)track_x_shifts[4];
@@ -207,10 +252,14 @@ int main () {
     tire = 0;
     drift_turn_offset = 12;
     bump = 0;
+    lap = 1;
+//    lap_total = 1;
+//    display_lap = 120;
 
     finish_line_offset = 0;
     finish_line_offset_low = 0;
 
+    // Initializes the 4 other cars
     for (tmp=0; tmp<4; tmp++) {
         other_car_track_lengths[tmp] = track_lengths;
         other_car_track_offset[tmp] = 0;
