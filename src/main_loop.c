@@ -31,8 +31,10 @@ extern unsigned int track_progression;
 extern unsigned char tire;
 extern unsigned char drift_turn_offset;
 extern unsigned char bump;
+extern unsigned char explosion;
 
 extern unsigned char other_car_speed[4];
+extern unsigned char other_car_speed_max[4];
 extern unsigned char other_car_track_id[4];
 extern unsigned char other_car_track_id_long[4];
 extern unsigned char other_car_track_offset[4];
@@ -77,7 +79,9 @@ extern char start;
 #pragma zpsym ("tire");
 #pragma zpsym ("drift_turn_offset");
 #pragma zpsym ("bump");
+#pragma zpsym ("explosion");
 #pragma zpsym ("other_car_speed");
+#pragma zpsym ("other_car_speed_max");
 #pragma zpsym ("other_car_track_id");
 #pragma zpsym ("other_car_track_id_long");
 #pragma zpsym ("other_car_track_offset");
@@ -115,6 +119,8 @@ unsigned char start3 = 64;
     if (line < finish_line_start) tmp2 = 0; \
     else if (line == finish_line_end) tmp2 = 1; \
     rect.x=track_x_shift[line];rect.y=line+32;rect.w=track_width[line];rect.gx=track_x_shift0[line];rect.gy=tracks[track_id][line];rect.b=tmp2;draw_sprite_rect();
+
+void breakpoint();
 
 void main_loop() {
         draw_sprite(landscape, 0, 127-landscape, 32, 0, 0, 2);      // Draw landscape
@@ -254,6 +260,11 @@ void main_loop() {
             tmp3 -= track_x_shifts[4][tmp4];
             tmp = 80 - tmp;
             draw_sprite(32+tmp3, tmp, 32, 16, 96, 32+tmp2, 2);
+            if ((tmp == 79 || tmp == 80) &&
+                other_car_speed[3] < speed &&
+                car_x > 0x44) {
+                explosion = 63;
+            }
         }
         if (other_car_track_progression[2] >= track_progression && other_car_track_progression[2] < track_progression + 55) {
             tmp = other_car_track_progression[2] - track_progression;
@@ -263,7 +274,12 @@ void main_loop() {
             tmp3 += 32;
             tmp3 -= track_x_shifts[4][tmp4];
             tmp = 80 - tmp;
-            draw_sprite(32+tmp3, tmp, 32, 16, 64, 32+tmp2, 2);
+            draw_sprite(tmp3, tmp, 32, 16, 64, 32+tmp2, 2);
+            if ((tmp == 79 || tmp == 80) &&
+                other_car_speed[2] < speed &&
+                car_x < 0x74) {
+                explosion = 63;
+            }
         }
         if (other_car_track_progression[1] >= track_progression && other_car_track_progression[1] < track_progression + 55) {
             tmp = other_car_track_progression[1] - track_progression;
@@ -274,6 +290,11 @@ void main_loop() {
             tmp3 -= track_x_shifts[4][tmp4];
             tmp = 80 - tmp;
             draw_sprite(32+tmp3, tmp, 32, 16, 32, 32+tmp2, 2);
+            if ((tmp == 79 || tmp == 80) &&
+                other_car_speed[1] < speed &&
+                car_x > 0x44) {
+                explosion = 63;
+            }
         }
         if (other_car_track_progression[0] >= track_progression && other_car_track_progression[0] < track_progression + 55) {
             tmp = other_car_track_progression[0] - track_progression;
@@ -283,14 +304,35 @@ void main_loop() {
             tmp3 += 32;
             tmp3 -= track_x_shifts[4][tmp4];
             tmp = 80 - tmp;
-            draw_sprite(32+tmp3, tmp, 32, 16, 0, 32+tmp2, 2);
+            draw_sprite(tmp3, tmp, 32, 16, 0, 32+tmp2, 2);
+            if ((tmp == 79 || tmp == 80) &&
+                other_car_speed[0] < speed &&
+                car_x < 0x74) {
+                explosion = 63;
+            }
         }
 
         // Draw player's car
+        tmp3 = car_x >> 1;
         if (bump && (track_id & 1)) {
-            draw_sprite(car_x >> 1, 79, 32, 16, ((track_id&3) << 5), 96, 2);
+            draw_sprite(tmp3, 79, 32, 16, ((track_id&3) << 5), 96, 2);
         } else {
-            draw_sprite(car_x >> 1, 80, 32, 16, ((track_id&3) << 5), 96, 2);
+            draw_sprite(tmp3, 80, 32, 16, ((track_id&3) << 5), 96, 2);
+        }
+
+        if (explosion) {
+            tmp = ((explosion & 0xF8)) << 2;
+            if (tmp >= 128) {
+                tmp -= 128;
+                tmp2 = 48;
+            } else {
+                tmp2 = 32;
+            }
+            draw_sprite(tmp3, 79, 32, 16, tmp, tmp2, 3);
+            if (speed != 1) {
+                speed--;
+            }
+            explosion--;
         }
 
         if (display_lap) {
@@ -386,7 +428,7 @@ void main_loop() {
             }
 
             // Player input (acceleration and deceleration)
-            if((player1_buttons & INPUT_MASK_UP) && !bump) {
+            if((player1_buttons & INPUT_MASK_UP) && !bump && !explosion) {
                 if (speed != 32) {
                     speed++;
                     speed_high = speed >> 3;
@@ -463,6 +505,7 @@ void main_loop() {
             }
 
             // Change the track progression for the other cars
+            if (other_car_speed[0] < other_car_speed_max[0]) { other_car_speed[0]++; }
             other_car_track_id_long[0] += other_car_speed[0];
             tmp = other_car_track_id[0];
             other_car_track_id[0] = other_car_track_id_long[0] >> 3;
@@ -477,6 +520,7 @@ void main_loop() {
                 other_car_lap[0]++;
             }
 
+            if (other_car_speed[1] < other_car_speed_max[1]) { other_car_speed[1]++; }
             other_car_track_id_long[1] += other_car_speed[1];
             tmp = other_car_track_id[1];
             other_car_track_id[1] = other_car_track_id_long[1] >> 3;
@@ -491,6 +535,7 @@ void main_loop() {
                 other_car_lap[1]++;
             }
             
+            if (other_car_speed[2] < other_car_speed_max[2]) { other_car_speed[2]++; }
             other_car_track_id_long[2] += other_car_speed[2];
             tmp = other_car_track_id[2];
             other_car_track_id[2] = other_car_track_id_long[2] >> 3;
@@ -505,6 +550,7 @@ void main_loop() {
                 other_car_lap[2]++;
             }
             
+            if (other_car_speed[3] < other_car_speed_max[3]) { other_car_speed[3]++; }
             other_car_track_id_long[3] += other_car_speed[3];
             tmp = other_car_track_id[3];
             other_car_track_id[3] = other_car_track_id_long[3] >> 3;

@@ -36,8 +36,10 @@ unsigned int track_progression;
 unsigned char tire;
 unsigned char drift_turn_offset;
 unsigned char bump;
+unsigned char explosion;
 
 unsigned char other_car_speed[4];
+unsigned char other_car_speed_max[4];
 unsigned char other_car_track_id[4];
 unsigned char other_car_track_id_long[4];
 unsigned char other_car_track_offset[4];
@@ -239,7 +241,7 @@ int main () {
     speed = 1;
     speed_high = 0;
     speed_low = 1;
-    car_x = 50;
+    car_x = 140;
     tmp = track[0];
     turn = 4;
     track_offset = 0;
@@ -255,9 +257,10 @@ int main () {
     drift_turn_offset = 12;
     bump = 0;
     lap = 1;
-    lap_total = 1;
+//    lap_total = 1;
     display_lap = 250;
     start = 200;
+    explosion = 0;
 
     finish_line_offset = 0;
     finish_line_offset_low = 0;
@@ -266,10 +269,15 @@ int main () {
     for (tmp=0; tmp<4; tmp++) {
         other_car_track_lengths[tmp] = track_lengths;
         other_car_track_offset[tmp] = 0;
-        other_car_speed[tmp] = 18+(tmp << 2);
-        other_car_track_id[tmp] = tmp << 3;
-        other_car_track_id_long[tmp] = 0;
-        other_car_track_progression[tmp] = tmp << 3;
+        other_car_speed[tmp] = 1;
+        other_car_speed_max[tmp] = 18+(tmp << 2);
+        other_car_track_id[tmp] = tmp *12+12;
+        other_car_track_id_long[tmp] = other_car_track_id[tmp] << 3;
+        while (other_car_track_id[tmp] >= 20) {
+            other_car_track_id[tmp] -= 20;
+            other_car_track_id_long[tmp] -= 160;
+        }
+        other_car_track_progression[tmp] = tmp *12+12;
         other_car_lap[tmp] = 1;
     }
 
