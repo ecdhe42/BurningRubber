@@ -1,3 +1,3 @@
 # BurningRubber
 
-A racing game for the GameTank (in development)
+A racing game for the GameTank
