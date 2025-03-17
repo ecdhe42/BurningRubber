@@ -125,7 +125,7 @@ void breakpoint();
 void main_loop() {
         draw_sprite(landscape, 0, 127-landscape, 32, 0, 0, 2);      // Draw landscape
         draw_sprite(0, 0, landscape, 32, 127-landscape, 0, 2);
-        draw_box(0, 32, 127, 64, 27);                               // Draw grass
+        draw_box(0, 32, 127, 64, 253);                               // Draw grass
         draw_box(48, 96, 80, 32, 0);
 
         tmp2 = 0;
@@ -333,6 +333,13 @@ void main_loop() {
                 speed--;
             }
             explosion--;
+            if (explosion && pitch_engine_long) {
+                pitch_engine_long--;
+            } else {
+                pitch_engine_long = 0;
+            }
+            pitch_engine = pitch_engine_long >> 2;
+
         }
 
         if (display_lap) {
@@ -377,10 +384,13 @@ void main_loop() {
         // Display starting blocks (no car movement)
         if (start) {
             if (start == 161) {
+//                play_sound_effect(&ASSET__sfx__start1_bin , 1);
                 start1 = 48;
             } else if (start == 81) {
+//                play_sound_effect(&ASSET__sfx__start1_bin , 1);
                 start2 = 48;
             } else if (start == 1) {
+//                play_sound_effect(&ASSET__sfx__start2_bin , 1);
                 start3 = 48;
             }
             draw_sprite(36, 40, 16, 16, start1, 16, 3);
